@@ -3,6 +3,13 @@
 Alle nennenswerten Änderungen an diesem Modul werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/).
 
+## [0.9.58-beta.1] - 2026-09-12
+
+### Changed
+- Anzeigename im Modulbaum von „NRG-Stack ChargerHub for IP-Symcon" auf „NRG-Stack
+  ChargerHub" gekürzt (`library.json`, rein kosmetisch — betrifft nur die Modulverwaltung,
+  nicht `module.json`/den PHP-Klassennamen).
+
 ## [0.9.57-beta.1] - 2026-09-02
 
 ### Added
