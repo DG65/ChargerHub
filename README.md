@@ -95,11 +95,11 @@ diese kommen bei ChargerHub ausschließlich über den neuen MQTT-Kartenzähler (
 
 ChargerHub bietet analog zu `MHUB_GetFunctions` eine Funktion `CHUB_GetFunctions($id)` an, über
 die ein EMS oder eine Kachel Ladepunkte, Momentanleistung und Steuerungsmöglichkeiten abfragen
-kann. Der Vertrag ist **mit der EMS-Entwicklung abgestimmt** (Version 1.1); je Ladepunkt ein Eintrag:
+kann. Der Vertrag ist **mit der EMS-Entwicklung abgestimmt** (Version 1.3); je Ladepunkt ein Eintrag:
 
 | Feld | Typ | Bedeutung |
 |---|---|---|
-| `contractVersion` | string | Vertragsversion `Major.Minor` (aktuell `'1.1'`); Konsumenten prüfen die Major, additive Felder erhöhen nur die Minor. Fehlt das Feld, gilt konservativ `'1.0'` |
+| `contractVersion` | string | Vertragsversion `Major.Minor` (aktuell `'1.3'`); Konsumenten prüfen die Major, additive Felder erhöhen nur die Minor. Fehlt das Feld, gilt konservativ `'1.0'` |
 | `function` | string | `'charger'` |
 | `label` | string | Instanzname |
 | `powerID` | int | Variablen-ID Ladeleistung (W); 0 falls nicht verfügbar |
@@ -112,8 +112,10 @@ kann. Der Vertrag ist **mit der EMS-Entwicklung abgestimmt** (Version 1.1); je L
 | `maxCurrent` | int | Wert (A): wirksame Obergrenze = min(Hardware-Limit des Herstellers, Property „Maximaler Anschlussstrom"). Jeder Schreibzugriff wird im Treiber zusätzlich hart darauf geklemmt |
 | `managedBy` | string | Wer hat die Hoheit über den Ladepunkt: `none`, `ems`, `goe-controller`, `tibber`, `p14a`, `marketer`, `other`. Bei allem außer `none`/`ems` steuert das EMS **nicht** selbst; `tibber` gilt als harte Sperre (Regelenergie, Pönale-Risiko). In der Instanz als Auswahlfeld, je Hersteller passende Teilmenge (`goe-controller` nur beim go-eCharger) |
 | `externallyManaged` | bool | Abgeleitet aus `managedBy` (`true`, sobald ein anderer Regler als `none`/`ems` die Hoheit hat). Bleibt aus Kompatibilität zu Vertrag 1.0 erhalten |
+| `vehicleNameID` | int | Variablen-ID „Zugeordnetes Fahrzeug" (String, leer wenn keins zugeordnet) — wird ausschließlich von außen per `CHUB_SetVehicleName()` gesetzt, ChargerHub rät selbst nie |
+| `lastSeenAt` | int | Unix-Timestamp des letzten erfolgreichen Lesezyklus (0 = noch nie). Additiv seit 1.3: unterscheidet „gerade 0 W" von „liefert seit Langem keine frische Messung mehr" — eine deaktivierte oder hängende Instanz reicht sonst unbemerkt ihren letzten bekannten Wert weiter. Fehlt das Feld (Vertrag < 1.3), unverändertes Verhalten |
 
-Vertragsversion (`contractVersion`): aktuell **`1.1`** (managedBy ergänzt; abwärtskompatibel zu 1.0).
+Vertragsversion (`contractVersion`): aktuell **`1.3`** (1.1: `managedBy`; 1.2: `vehicleNameID`; 1.3: `lastSeenAt` — EMS-Vorfall 12.09.2026, Grid Rewards hielt eine eingefrorene 0-W-Messung für gültig und lud die Hausbatterie ins Auto leer).
 
 Siehe [CLAUDE.md](CLAUDE.md) für die Konventionen des Verbunds.
 

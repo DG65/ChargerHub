@@ -3,6 +3,21 @@
 Alle nennenswerten Änderungen an diesem Modul werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/).
 
+## [0.9.60-beta.1] - 2026-09-12
+
+### Added
+- `CHUB_GetFunctions()`: neues Feld `lastSeenAt` (Unix-Timestamp des letzten erfolgreichen
+  Lesezyklus, 0 = noch nie), `contractVersion` 1.2→1.3. Anlass: EMS-Vorfall vom
+  12.09.2026 — Grid Rewards bestellte den Stromeinkauf anhand von `powerID`, das bei
+  einer deaktivierten/hängenden Instanz unbemerkt den letzten bekannten Wert (0 W)
+  weiterreichte, statt als veraltet erkennbar zu sein. Symcons eigenes
+  `VariableUpdated` half nicht, da es sich bei jedem Poll aktualisiert, auch wenn der
+  WERT unverändert bleibt (`VariableChanged` bleibt dagegen stehen). Gesetzt zentral in
+  `SetVarBool()` bei `'connected'=true`, treiberunabhängig. Additiv: fehlt das Feld
+  (Vertrag < 1.3), unverändertes Verhalten.
+- README-Vertragstabelle nachgezogen (war noch auf 1.1 stehengeblieben, `vehicleNameID`
+  aus 1.2 fehlte ganz).
+
 ## [0.9.59-beta.1] - 2026-09-12
 
 ### Fixed

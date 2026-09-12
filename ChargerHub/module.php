@@ -1519,6 +1519,9 @@ class ChargerHub extends IPSModule
         // Für ReleaseForceLockOnHandoff() — merkt sich den zuletzt angewendeten
         // „Wer regelt?"-Wert, um den ÜBERGANG none→(etwas anderes) zu erkennen.
         $this->RegisterAttributeString('PrevManagedBy', 'none');
+        // Zeitpunkt (Unix-Timestamp) des letzten erfolgreichen Lesezyklus —
+        // siehe SetVarBool()/GetFunctions() 'lastSeenAt', contractVersion 1.3.
+        $this->RegisterAttributeInteger('LastSeenAt', 0);
         // Beobachtungszähler fürs Phasen-Umschalten beim Überschussladen — ein
         // Wechsel wird erst nach mehreren AUFEINANDERFOLGENDEN Polls mit derselben
         // Tendenz ausgelöst, nicht schon beim ersten (verhindert Pendeln).
@@ -2326,8 +2329,8 @@ class ChargerHub extends IPSModule
             // Vertragsversion Major.Minor (Verbund-Konvention, siehe SUITE.md
             // im EMS-Repo). Konsumenten prüfen die Major; additive Felder
             // erhöhen nur die Minor. Fehlt das Feld, gilt konservativ '1.0'.
-            // 1.1: managedBy ergänzt.
-            'contractVersion'    => '1.2',
+            // 1.1: managedBy ergänzt. 1.3: lastSeenAt ergänzt.
+            'contractVersion'    => '1.3',
             'function'           => 'charger',
             'label'              => IPS_GetName($this->InstanceID),
             'powerID'            => $powerID ?: 0,
@@ -2355,6 +2358,18 @@ class ChargerHub extends IPSModule
             // kein Fahrzeug angesteckt ist) — Wert-ID, kein eigenes Feld,
             // damit Konsumenten wie gewohnt per GetValue() lesen.
             'vehicleNameID'      => $this->FindVarByIdent('vehicle_name') ?: 0,
+            // 1.3: Unix-Timestamp des letzten erfolgreichen Lesezyklus (0 =
+            // noch nie), gesetzt in SetVarBool() bei 'connected'=true.
+            // EMS-Vorfall 12.09.2026 (Grid Rewards + Hausbatterie-Fehlladung):
+            // powerID allein kann nicht zwischen "gerade 0 W" und "seit
+            // Langem keine frische Messung mehr" unterscheiden — eine
+            // deaktivierte oder hängende Instanz liefert weiter ihren
+            // zuletzt bekannten Wert, ohne dass GetValue() das erkennen
+            // lässt. Konsumenten: Feld fehlt bei Vertrag < 1.3 -> Verhalten
+            // wie bisher; ist es älter als ein selbst gewähltes Zeitfenster
+            // (EMS nutzt 10 Minuten), gilt die Leistung als unbekannt statt
+            // als 0 W.
+            'lastSeenAt'         => $this->ReadAttributeInteger('LastSeenAt'),
         ]];
     }
 
@@ -2420,7 +2435,7 @@ class ChargerHub extends IPSModule
             'elements' => [
                 [
                     'type'     => 'ExpansionPanel',
-                    'caption'  => '📖  Dokumentation & Hilfe (Version 0.9.59-beta.1)',
+                    'caption'  => '📖  Dokumentation & Hilfe (Version 0.9.60-beta.1)',
                     'expanded' => false,
                     'items'    => [
                         ['type' => 'Label', 'caption' => 'ChargerHub liest und steuert Wallboxen verschiedener Hersteller per Modbus TCP. Hersteller wählen, IP-Adresse/Hostname eintragen, Datenpunkt-Gruppen aktivieren.'],
@@ -2904,6 +2919,17 @@ class ChargerHub extends IPSModule
         $vid = $this->FindVarByIdent($ident);
         if ($vid) {
             SetValueBoolean($vid, $value);
+        }
+        // Jeder Treiber meldet einen erfolgreichen Lesezyklus über
+        // 'connected'=true (siehe readValues() der vier Driver-Klassen) —
+        // hier zentral abgreifen, statt in jedem Treiber einzeln zu
+        // duplizieren. Grundlage für 'lastSeenAt' im Vertrag (siehe
+        // GetFunctions(), contractVersion 1.3): EMS/Grid-Rewards-Vorfall
+        // 12.09.2026 — eine Wallbox, die nichts mehr liest, aber ihre
+        // zuletzt bekannten Werte unverändert weiterreicht (0 W), sah für
+        // den Konsumenten wie eine gültige Momentanmessung aus.
+        if ($ident === 'connected' && $value === true) {
+            $this->WriteAttributeInteger('LastSeenAt', time());
         }
     }
 
