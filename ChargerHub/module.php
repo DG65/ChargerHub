@@ -115,6 +115,26 @@ class CHUB_ModbusTcpClient
             return null;
         }
 
+        // Transaktions-ID prüfen (MBAP-Header, erste 2 Bytes) — Fund der
+        // InverterHub-Sitzung (12.09.2026) an ihrer eigenen, unabhängigen
+        // Modbus-Basisklasse: im Batch-Modus (eine wiederverwendete
+        // Verbindung für mehrere Reads pro Zyklus, siehe beginBatch()) wurde
+        // dort nie geprüft, ob eine eintreffende Antwort tatsächlich zur
+        // zuletzt gestellten Anfrage gehört. Trifft die Antwort eines
+        // vorherigen, bereits als Timeout gewerteten Reads verspätet doch
+        // noch ein, würde sie sonst dem nächsten Read im selben Zyklus als
+        // Ergebnis untergeschoben — zwei fremde Registerhälften könnten so
+        // als High-/Low-Wort eines 32-Bit-Werts zusammengesetzt werden (bei
+        // InverterHub real beobachtet: 261,5 MW PV-Leistung nachts). Unser
+        // beginBatch()/endBatch() wird aktuell nirgends aufgerufen (jeder
+        // Read bekommt also ohnehin eine frische Verbindung) — die Prüfung
+        // schützt trotzdem vor genau diesem Fehler, falls das künftig doch
+        // genutzt wird, und kostet im Normalfall nichts.
+        $rtid = (ord($response[0]) << 8) | ord($response[1]);
+        if ($rtid !== $tid) {
+            return null;
+        }
+
         $rfc = ord($response[7]);
         if ($rfc & 0x80 || $rfc !== $fc) {
             return null;
@@ -2400,7 +2420,7 @@ class ChargerHub extends IPSModule
             'elements' => [
                 [
                     'type'     => 'ExpansionPanel',
-                    'caption'  => '📖  Dokumentation & Hilfe (Version 0.9.58-beta.1)',
+                    'caption'  => '📖  Dokumentation & Hilfe (Version 0.9.59-beta.1)',
                     'expanded' => false,
                     'items'    => [
                         ['type' => 'Label', 'caption' => 'ChargerHub liest und steuert Wallboxen verschiedener Hersteller per Modbus TCP. Hersteller wählen, IP-Adresse/Hostname eintragen, Datenpunkt-Gruppen aktivieren.'],

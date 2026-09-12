@@ -3,6 +3,22 @@
 Alle nennenswerten Änderungen an diesem Modul werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.0.0/).
 
+## [0.9.59-beta.1] - 2026-09-12
+
+### Fixed
+- `CHUB_ModbusTcpClient::modbusRead()` prüfte die Transaktions-ID (MBAP-Header) der Antwort
+  nie gegen die zuletzt gestellte Anfrage — Fund der InverterHub-Sitzung an ihrer eigenen,
+  unabhängigen Modbus-Basisklasse: im Batch-Modus (eine wiederverwendete Verbindung für
+  mehrere Reads pro Zyklus) konnte die verspätet eintreffende Antwort eines bereits als
+  Timeout gewerteten Reads dem nächsten Read untergeschoben werden — zwei fremde
+  Registerhälften könnten so als High-/Low-Wort eines 32-Bit-Werts zusammengesetzt werden
+  (bei InverterHub real beobachtet: 261,5 MW PV-Leistung nachts). Bei uns ist der
+  Batch-Modus (`beginBatch()`/`endBatch()`) aktuell nirgends verdrahtet — jeder Read bekam
+  bisher ohnehin eine frische Verbindung, das Loch war also bislang inaktiv, nicht aber
+  ausgeschlossen. TID wird jetzt geprüft, ein Nichttreffer wird verworfen statt verwertet —
+  schützt für den Fall, dass der Batch-Modus künftig genutzt wird, kostet im Normalfall
+  nichts.
+
 ## [0.9.58-beta.1] - 2026-09-12
 
 ### Changed
